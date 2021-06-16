@@ -1,2 +1,5 @@
 # porkbun-go
-Porkbun API written in Go
+Porkbun Go SDK
+
+## Notes
+This is **NOT** an official SDK
