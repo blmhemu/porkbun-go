@@ -118,7 +118,7 @@ func extractDNSResponse(res *http.Response, err error) (*DNSResponse, error) {
 	}
 	var dnsResp DNSResponse
 	if err := json.NewDecoder(res.Body).Decode(&dnsResp); err != nil {
-		return &DNSResponse{}, fmt.Errorf("Error decoding DNSResponse json")
+		return &DNSResponse{}, err
 	}
 	if err := requireSuccess(&dnsResp); err != nil {
 		return &DNSResponse{}, err
