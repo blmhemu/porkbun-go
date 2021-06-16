@@ -92,13 +92,6 @@ func requireSuccess(dnsRes *DNSResponse) error {
 	return nil
 }
 
-func generateUnexpectedResponseCodeError(resp *http.Response) error {
-	var buf bytes.Buffer
-	io.Copy(&buf, resp.Body)
-	resp.Body.Close()
-	return fmt.Errorf("Unexpected response code: %d (%s)", resp.StatusCode, buf.Bytes())
-}
-
 func requireOK(res *http.Response, err error) (*http.Response, error) {
 	if err != nil {
 		if res != nil {
@@ -110,6 +103,13 @@ func requireOK(res *http.Response, err error) (*http.Response, error) {
 		return nil, generateUnexpectedResponseCodeError(res)
 	}
 	return res, nil
+}
+
+func generateUnexpectedResponseCodeError(resp *http.Response) error {
+	var buf bytes.Buffer
+	io.Copy(&buf, resp.Body)
+	resp.Body.Close()
+	return fmt.Errorf("Unexpected response code: %d (%s)", resp.StatusCode, buf.Bytes())
 }
 
 func extractDNSResponse(res *http.Response, err error) (*DNSResponse, error) {
