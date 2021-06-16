@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
+	"strings"
 )
 
 const PORKBUN_DNS_BASE = PORKBUN_API_BASE + "/dns"
@@ -12,6 +14,7 @@ const PORKBUN_DNS_CREATE = PORKBUN_DNS_BASE + "/create/%s"
 const PORKBUN_DNS_EDIT = PORKBUN_DNS_BASE + "/edit/%s/%s"
 const PORKBUN_DNS_DELETE = PORKBUN_DNS_BASE + "/delete/%s/%s"
 const PORKBUN_DNS_RETRIEVE = PORKBUN_DNS_BASE + "/retrieve/%s"
+const STATUS_SUCCESS = "SUCCESS"
 
 type Client struct {
 	config Config
@@ -69,7 +72,7 @@ func (c *Client) getAuthJson() ([]byte, error) {
 	return json, nil
 }
 
-func (c *Client) createDNSRecordWithAuthJson(dnsRecord *DNSRecord) ([]byte, error) {
+func (c *Client) getDNSRecordWithAuthJson(dnsRecord *DNSRecord) ([]byte, error) {
 	lee := dnsRecordWithAuth{
 		Auth:      c.config.Auth,
 		DNSRecord: *dnsRecord,
@@ -81,22 +84,105 @@ func (c *Client) createDNSRecordWithAuthJson(dnsRecord *DNSRecord) ([]byte, erro
 	return json, nil
 }
 
-func (c *Client) FetchAllRecords(domain string, newRecords []string) (DNSResponse, error) {
-	authjson, err := c.getAuthJson()
-	if err != nil {
-		return DNSResponse{}, err
+// Helper land
+func requireSuccess(dnsRes *DNSResponse) error {
+	if !strings.EqualFold(dnsRes.Status, STATUS_SUCCESS) {
+		return fmt.Errorf("Expected `success` code, got %s", dnsRes.Status)
 	}
-	res, err := c.config.Client.Post(
-		fmt.Sprintf(PORKBUN_DNS_RETRIEVE, domain),
-		"application/json",
-		bytes.NewBuffer(authjson),
-	)
+	return nil
+}
+
+func generateUnexpectedResponseCodeError(resp *http.Response) error {
+	var buf bytes.Buffer
+	io.Copy(&buf, resp.Body)
+	resp.Body.Close()
+	return fmt.Errorf("Unexpected response code: %d (%s)", resp.StatusCode, buf.Bytes())
+}
+
+func requireOK(res *http.Response, err error) (*http.Response, error) {
 	if err != nil {
-		return DNSResponse{}, err
+		if res != nil {
+			res.Body.Close()
+		}
+		return nil, err
+	}
+	if res.StatusCode != 200 {
+		return nil, generateUnexpectedResponseCodeError(res)
+	}
+	return res, nil
+}
+
+func extractDNSResponse(res *http.Response, err error) (*DNSResponse, error) {
+	if err != nil {
+		return &DNSResponse{}, err
 	}
 	var dnsResp DNSResponse
 	if err := json.NewDecoder(res.Body).Decode(&dnsResp); err != nil {
-		return DNSResponse{}, fmt.Errorf("Error decoding DNSResponse json")
+		return &DNSResponse{}, fmt.Errorf("Error decoding DNSResponse json")
 	}
-	return dnsResp, nil
+	if requireSuccess(&dnsResp) != nil {
+		return &DNSResponse{}, err
+	}
+	return &dnsResp, nil
+}
+
+// Main function land
+func (c *Client) CreateRecord(domain string, dnsrecord *DNSRecord) (*DNSResponse, error) {
+	authjson, err := c.getDNSRecordWithAuthJson(dnsrecord)
+	if err != nil {
+		return &DNSResponse{}, err
+	}
+	res, err := requireOK(
+		c.config.Client.Post(
+			fmt.Sprintf(PORKBUN_DNS_CREATE, domain),
+			"application/json",
+			bytes.NewBuffer(authjson)),
+	)
+	defer res.Body.Close()
+	return extractDNSResponse(res, err)
+}
+
+func (c *Client) EditRecord(domain string, id string, dnsrecord *DNSRecord) (*DNSResponse, error) {
+	authjson, err := c.getDNSRecordWithAuthJson(dnsrecord)
+	if err != nil {
+		return &DNSResponse{}, err
+	}
+	res, err := requireOK(
+		c.config.Client.Post(
+			fmt.Sprintf(PORKBUN_DNS_EDIT, domain, id),
+			"application/json",
+			bytes.NewBuffer(authjson)),
+	)
+	defer res.Body.Close()
+	return extractDNSResponse(res, err)
+}
+
+func (c *Client) DeleteRecord(domain string, id string) (*DNSResponse, error) {
+	authjson, err := c.getAuthJson()
+	if err != nil {
+		return &DNSResponse{}, err
+	}
+	res, err := requireOK(
+		c.config.Client.Post(
+			fmt.Sprintf(PORKBUN_DNS_DELETE, domain, id),
+			"application/json",
+			bytes.NewBuffer(authjson)),
+	)
+	defer res.Body.Close()
+	return extractDNSResponse(res, err)
+}
+
+func (c *Client) RetrieveRecords(domain string) (*DNSResponse, error) {
+	authjson, err := c.getAuthJson()
+	if err != nil {
+		return &DNSResponse{}, err
+	}
+	res, err := requireOK(
+		c.config.Client.Post(
+			fmt.Sprintf(PORKBUN_DNS_RETRIEVE, domain),
+			"application/json",
+			bytes.NewBuffer(authjson)),
+	)
+	defer res.Body.Close()
+	return extractDNSResponse(res, err)
 }
