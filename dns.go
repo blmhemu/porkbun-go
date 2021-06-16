@@ -127,10 +127,10 @@ func extractDNSResponse(res *http.Response, err error) (*DNSResponse, error) {
 }
 
 // Main function land
-func (c *Client) CreateRecord(domain string, dnsrecord *DNSRecord) (*DNSResponse, error) {
+func (c *Client) CreateRecord(domain string, dnsrecord *DNSRecord) (string, error) {
 	authjson, err := c.getDNSRecordWithAuthJson(dnsrecord)
 	if err != nil {
-		return &DNSResponse{}, err
+		return "", err
 	}
 	res, err := requireOK(
 		c.config.Client.Post(
@@ -139,13 +139,14 @@ func (c *Client) CreateRecord(domain string, dnsrecord *DNSRecord) (*DNSResponse
 			bytes.NewBuffer(authjson)),
 	)
 	defer res.Body.Close()
-	return extractDNSResponse(res, err)
+	d, e := extractDNSResponse(res, err)
+	return d.Id, e
 }
 
-func (c *Client) EditRecord(domain string, id string, dnsrecord *DNSRecord) (*DNSResponse, error) {
+func (c *Client) EditRecord(domain string, id string, dnsrecord *DNSRecord) error {
 	authjson, err := c.getDNSRecordWithAuthJson(dnsrecord)
 	if err != nil {
-		return &DNSResponse{}, err
+		return err
 	}
 	res, err := requireOK(
 		c.config.Client.Post(
@@ -154,13 +155,14 @@ func (c *Client) EditRecord(domain string, id string, dnsrecord *DNSRecord) (*DN
 			bytes.NewBuffer(authjson)),
 	)
 	defer res.Body.Close()
-	return extractDNSResponse(res, err)
+	_, e := extractDNSResponse(res, err)
+	return e
 }
 
-func (c *Client) DeleteRecord(domain string, id string) (*DNSResponse, error) {
+func (c *Client) DeleteRecord(domain string, id string) error {
 	authjson, err := c.getAuthJson()
 	if err != nil {
-		return &DNSResponse{}, err
+		return err
 	}
 	res, err := requireOK(
 		c.config.Client.Post(
@@ -169,7 +171,8 @@ func (c *Client) DeleteRecord(domain string, id string) (*DNSResponse, error) {
 			bytes.NewBuffer(authjson)),
 	)
 	defer res.Body.Close()
-	return extractDNSResponse(res, err)
+	_, e := extractDNSResponse(res, err)
+	return e
 }
 
 func (c *Client) RetrieveRecords(domain string) (*DNSResponse, error) {
