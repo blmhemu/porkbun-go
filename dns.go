@@ -41,9 +41,9 @@ type DNSRecord struct {
 }
 
 type DNSResponse struct {
-	Status  string      `json:"status,omitempty"`
-	Id      string      `json:"id,omitempty"`
-	Records []DNSRecord `json:"records,omitempty"`
+	Status  string       `json:"status,omitempty"`
+	Id      string       `json:"id,omitempty"`
+	Records []*DNSRecord `json:"records,omitempty"`
 }
 
 type dnsRecordWithAuth struct {
@@ -175,7 +175,7 @@ func (c *Client) DeleteRecord(domain string, id string) error {
 	return e
 }
 
-func (c *Client) RetrieveRecords(domain string) ([]DNSRecord, error) {
+func (c *Client) RetrieveRecords(domain string) ([]*DNSRecord, error) {
 	authjson, err := c.getAuthJson()
 	if err != nil {
 		return nil, err
