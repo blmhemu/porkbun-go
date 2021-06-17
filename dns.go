@@ -138,6 +138,9 @@ func (c *Client) CreateRecord(domain string, dnsrecord *DNSRecord) (string, erro
 			"application/json",
 			bytes.NewBuffer(authjson)),
 	)
+	if err != nil {
+		return "", err
+	}
 	defer res.Body.Close()
 	d, e := extractDNSResponse(res, err)
 	return d.Id, e
@@ -154,6 +157,9 @@ func (c *Client) EditRecord(domain string, id string, dnsrecord *DNSRecord) erro
 			"application/json",
 			bytes.NewBuffer(authjson)),
 	)
+	if err != nil {
+		return err
+	}
 	defer res.Body.Close()
 	_, e := extractDNSResponse(res, err)
 	return e
@@ -170,6 +176,9 @@ func (c *Client) DeleteRecord(domain string, id string) error {
 			"application/json",
 			bytes.NewBuffer(authjson)),
 	)
+	if err != nil {
+		return err
+	}
 	defer res.Body.Close()
 	_, e := extractDNSResponse(res, err)
 	return e
@@ -186,6 +195,9 @@ func (c *Client) RetrieveRecords(domain string) ([]*DNSRecord, error) {
 			"application/json",
 			bytes.NewBuffer(authjson)),
 	)
+	if err != nil {
+		return nil, err
+	}
 	defer res.Body.Close()
 	d, e := extractDNSResponse(res, err)
 	return d.Records, e
