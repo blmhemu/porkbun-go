@@ -175,10 +175,10 @@ func (c *Client) DeleteRecord(domain string, id string) error {
 	return e
 }
 
-func (c *Client) RetrieveRecords(domain string) (*DNSResponse, error) {
+func (c *Client) RetrieveRecords(domain string) ([]DNSRecord, error) {
 	authjson, err := c.getAuthJson()
 	if err != nil {
-		return &DNSResponse{}, err
+		return nil, err
 	}
 	res, err := requireOK(
 		c.config.Client.Post(
@@ -187,5 +187,6 @@ func (c *Client) RetrieveRecords(domain string) (*DNSResponse, error) {
 			bytes.NewBuffer(authjson)),
 	)
 	defer res.Body.Close()
-	return extractDNSResponse(res, err)
+	d, e := extractDNSResponse(res, err)
+	return d.Records, e
 }
