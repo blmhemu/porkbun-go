@@ -42,7 +42,7 @@ type DNSRecord struct {
 
 type DNSResponse struct {
 	Status  string       `json:"status,omitempty"`
-	Id      string       `json:"id,omitempty"`
+	Id      json.Number  `json:"id,omitempty"`
 	Records []*DNSRecord `json:"records,omitempty"`
 }
 
@@ -143,7 +143,7 @@ func (c *Client) CreateRecord(domain string, dnsrecord *DNSRecord) (string, erro
 	}
 	defer res.Body.Close()
 	d, e := extractDNSResponse(res, err)
-	return d.Id, e
+	return d.Id.String(), e
 }
 
 func (c *Client) EditRecord(domain string, id string, dnsrecord *DNSRecord) error {
